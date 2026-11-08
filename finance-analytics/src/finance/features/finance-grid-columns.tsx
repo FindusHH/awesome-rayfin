@@ -74,14 +74,14 @@ export function varianceGridColumns(rows: VarianceRow[], opts: VarianceGridOptio
   const deltaCol = (id: string, header: string): GridColumnDef => ({
     id,
     header,
-    numeric: true,
+    numericStyling: true,
     sortable: true,
     cellRenderer: (v, row) => renderDelta(v, (row as Record<string, unknown>)[`${id}_pct`], (row as Record<string, unknown>)[`${id}_fav`] as Favorability, prefix),
   });
   const valueCol = (id: string, header: string): GridColumnDef => ({
     id,
     header,
-    numeric: true,
+    numericStyling: true,
     sortable: true,
     cellRenderer: compactRenderer(prefix),
   });
@@ -138,14 +138,14 @@ export function timeSeriesGridColumns(rows: TimeSeriesRow[], opts: TimeSeriesGri
   const seriesByLabel = new Map(rows.map((r) => [r.label, r.values]));
 
   const columns: GridColumnDef[] = [{ id: "label", header: opts.metricLabel ?? "Metric", sortable: true }];
-  opts.periods.forEach((p, i) => columns.push({ id: `p${i}`, header: p, numeric: true, sortable: true, cellRenderer: value }));
-  trailing.forEach((w, i) => columns.push({ id: `t${i}`, header: w.label, numeric: true, sortable: true, cellRenderer: value }));
-  if (showTotal) columns.push({ id: "total", header: "Total", numeric: true, sortable: true, cellRenderer: value });
+  opts.periods.forEach((p, i) => columns.push({ id: `p${i}`, header: p, numericStyling: true, sortable: true, cellRenderer: value }));
+  trailing.forEach((w, i) => columns.push({ id: `t${i}`, header: w.label, numericStyling: true, sortable: true, cellRenderer: value }));
+  if (showTotal) columns.push({ id: "total", header: "Total", numericStyling: true, sortable: true, cellRenderer: value });
   if (showGrowth) {
     columns.push({
       id: "pop",
       header: "PoP",
-      numeric: true,
+      numericStyling: true,
       sortable: true,
       // Cell value is stored as a percent (to match the export DataTable + Ctrl+C copy),
       // so divide by 100 back to a ratio for `formatSignedPercent`.

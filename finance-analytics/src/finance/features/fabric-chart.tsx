@@ -133,6 +133,7 @@ const FabricChart = forwardRef<VegaVisualHandle, FabricChartProps>(function Fabr
       aria-label={`${variant} chart. ${chartSummary(data, valuePrefix)}`}
     >
       <VegaVisual
+        chromeless
         ref={innerRef}
         spec={spec}
         theme={theme}

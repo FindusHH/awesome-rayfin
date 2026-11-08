@@ -28,6 +28,7 @@ export default function FinanceDataGrid({ columns, data, rowHeight = 34 }: Finan
   return (
     <div className="overflow-hidden rounded-xl border border-border" style={{ maxHeight: "60vh" }}>
       <FabricGrid
+        chromeless
         columns={columns}
         data={data}
         theme={theme}

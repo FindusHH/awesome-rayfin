@@ -29,16 +29,18 @@ import type { FabricColumnMetaMap, FabricQueryTable } from "./fabric-data-source
 export type {
   DataTable as FabricDataTable,
   ColumnDef as FabricColumnDef,
-  DataPointSelection,
-  DataPointPredicate,
-  SetPredicate,
-  RangePredicate,
+  SemanticSelection as DataPointSelection,
+  InteractionPredicate as DataPointPredicate,
   InteractionEvent,
   SelectInteractionEvent,
   ClearInteractionEvent,
   InteractionEventCallback,
   VisualTheme,
 } from "@microsoft/fabric-visuals-core";
+
+import type { InteractionPredicate } from "@microsoft/fabric-visuals-core";
+export type SetPredicate = Extract<InteractionPredicate, { type: "set" }>;
+export type RangePredicate = Extract<InteractionPredicate, { type: "range" }>;
 
 /** Strip the `Table[Col]` / `[Measure]` wrapper a DAX result name carries → bare label. */
 function bareLabel(daxName: string): string {

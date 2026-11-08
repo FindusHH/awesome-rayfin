@@ -18,7 +18,7 @@
  */
 import type { TopLevelSpec } from "vega-lite";
 import type { DataTable, ColumnDef } from "@microsoft/fabric-visuals-core";
-import type { DataPointSelection } from "@microsoft/fabric-visuals-core";
+import type { DataPointSelection } from "../data/fabric-interop";
 import type { BarDatum } from "./bar-chart";
 
 export type FabricChartVariant = "bar" | "line" | "donut";
@@ -162,9 +162,10 @@ export function buildChartSpec(variant: FabricChartVariant, opts: FabricChartSpe
  */
 export function selectionToIndex(selection: DataPointSelection, data: BarDatum[]): number {
   for (const predicate of selection.predicates) {
-    if (predicate.type === "set" && predicate.name === LABEL_FIELD) {
+    if (predicate.type === "set" && predicate.fieldId === LABEL_FIELD && !predicate.excluded) {
       const value = predicate.values[0];
-      const index = data.findIndex((d) => d.label === value);
+      if (value?.kind !== "value") continue;
+      const index = data.findIndex((d) => d.label === value.value);
       if (index !== -1) return index;
     }
   }

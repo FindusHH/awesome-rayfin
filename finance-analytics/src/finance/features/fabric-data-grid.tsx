@@ -179,6 +179,7 @@ export default function FabricDataGrid({ table, initialPageSize = 25, onRowSelec
       {/* Official grid body: native cell selection + Ctrl+C Excel copy + virtualization. */}
       <div className="overflow-hidden rounded-xl border border-border" style={{ maxHeight: "60vh" }}>
         <FabricGrid
+          chromeless
           columns={gridColumns}
           data={gridRows}
           theme={theme}

@@ -17,17 +17,30 @@ npm create @microsoft/rayfin@latest -- --template https://github.com/microsoft/a
 
 ## Getting started
 
+Run these commands from the `ibcs-trainer` directory. Fabric static hosting
+requires Rayfin CLI 1.35.1 or later; npm scripts use the project-local CLI.
+
 ```bash
 npm install
 npm run dev
 ```
+
+`npm run dev` deploys the backend and starts Vite locally, skipping the static
+frontend upload. To deploy both the backend and frontend to Fabric instead:
+
+```bash
+npm run rayfin:up
+```
+
+If Fabric reports an outdated CLI, run
+`npm install --save-dev @microsoft/rayfin-cli@^1.36.2`, then retry.
 
 Open http://localhost:5173, sign in, and play. When a run ends (win or game
 over), the game posts its stats to the React host and the header shows
 "Run saved".
 
 > This app is fully self-contained — it depends only on the published
-> `@microsoft/rayfin-*` packages (v1.33.x) from the public npm registry, so it
+> `@microsoft/rayfin-*` packages from the public npm registry, so it
 > installs and runs on its own without the `project-rayfin` monorepo.
 
 ## How the migration works
@@ -71,7 +84,7 @@ via `user_id` (from the JWT `sub` claim), so a player only sees their own runs.
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Deploy app to Fabric and start local dev server |
+| `npm run dev` | Deploy backend to Fabric and start local dev server (no static frontend upload) |
 | `npm run build` | Production build |
 | `npm run build:fabric` | Build for Fabric deployment |
 | `npm run lint` | Lint with ESLint |

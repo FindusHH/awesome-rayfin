@@ -22,7 +22,7 @@ export function toGridColumns(columns: Column[]): GridColumnDef[] {
   return columns.map((c) => ({
     id: c.key,
     header: c.label,
-    numeric: c.numeric,
+    numericStyling: c.numeric,
     sortable: true,
     cellRenderer:
       c.numeric || c.format

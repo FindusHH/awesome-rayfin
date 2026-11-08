@@ -26,6 +26,30 @@ npm run dev          # → http://localhost:5173  (offline, sample data)
 That's it — the full app (nav, command palette, filters, charts, tables, exports,
 intelligence rail) renders against the bundled sample dataset with no auth.
 
+### Deploy to Fabric
+
+Run from the `finance-analytics` directory:
+
+```bash
+npm run rayfin:up
+```
+
+This builds and deploys the app to Fabric without starting a local dev server.
+The CLI prompts for sign-in when needed. The target workspace requires Fabric
+capacity and the Fabric Apps workload enabled by your tenant administrator.
+Static hosting requires Rayfin CLI 1.35.1 or later; npm scripts use the
+project-local CLI.
+
+The Fabric visual packages use their own release series: this template uses
+`@microsoft/fabric-{datagrid,visuals,visuals-core}` 5.1.x with Rayfin 1.36.x.
+Do not apply a Rayfin 1.35.x version range to the visual packages: that version
+does not exist in their published releases.
+
+For a Fabric backend with a local frontend, use `npm run dev:fabric` instead.
+`npm run dev` remains the offline sample-data workflow. Deployment alone does
+not connect the app to a live semantic model; see *Connect a real semantic model*
+below.
+
 Try:
 
 - **⌘K / Ctrl-K** — command palette (fuzzy search, recents, shortcuts).

@@ -10,13 +10,13 @@
  * is the typed, tested seam for that fold — plus the reverse projection so our active
  * filters can be expressed as official selections (e.g. to drive a visual's highlight).
  *
- * Runtime-dependency-free: the official types are `import type` only, and
- * `selectionsMatch` is reimplemented here mirroring the `@microsoft/fabric-visuals-core`
- * semantics (structural, order-independent over a selection's predicates).
+ * Selection equality uses the SDK's semantic comparison so the host echo-guard
+ * stays consistent with the visual's selection contract.
  */
 
 import type { CellValue, DataTable } from "./types";
 import type { FilterState } from "./filters";
+import { parseCalendarDate, semanticSelectionEqual, semanticSelectionsEqual } from "@microsoft/fabric-visuals-core";
 import type {
   DataPointPredicate,
   DataPointSelection,
@@ -32,8 +32,8 @@ import type {
 export function filtersToSelections(active: FilterState): DataPointSelection[] {
   return Object.entries(active)
     .filter(([, v]) => v !== "" && v != null)
-    .map(([name, value]) => ({
-      predicates: [{ type: "set", name, values: [value] } satisfies SetPredicate],
+    .map(([fieldId, value]) => ({
+      predicates: [{ type: "set", fieldId, values: [{ kind: "value", value }] } satisfies SetPredicate],
     }));
 }
 
@@ -57,10 +57,10 @@ export function selectionsToFilters(events: InteractionEvent[], base: FilterStat
     for (const sel of ev.selections) {
       for (const p of sel.predicates) {
         if (p.type !== "set") continue;
-        if (!p.name || p.values.length === 0) continue;
+        if (!p.fieldId || p.excluded || p.values.length === 0) continue;
         const first = p.values[0];
-        if (first == null) continue;
-        next[p.name] = String(first);
+        if (first.kind !== "value") continue;
+        next[p.fieldId] = String(first.value);
       }
     }
   }
@@ -76,7 +76,7 @@ export function selectionsToFilters(events: InteractionEvent[], base: FilterStat
  * predicates survive the round-trip to the host).
  */
 export function eventToSelections(event: InteractionEvent): DataPointSelection[] {
-  return event.action === "clear" ? [] : event.selections;
+  return event.action === "clear" ? [] : [...event.selections];
 }
 
 /**
@@ -95,88 +95,62 @@ export function eventsToSelections(events: InteractionEvent[]): DataPointSelecti
  * value received from the host isn't republished (which would loop between items).
  */
 export function selectionListsMatch(a: DataPointSelection[], b: DataPointSelection[]): boolean {
-  if (a.length !== b.length) return false;
-  const remaining = b.slice();
-  for (const sa of a) {
-    const idx = remaining.findIndex((sb) => selectionsMatch(sa, sb));
-    if (idx < 0) return false;
-    remaining.splice(idx, 1);
-  }
-  return true;
+  return semanticSelectionsEqual(a, b);
 }
 
 /**
- * Value equality mirroring `@microsoft/fabric-visuals-core`'s internal `valuesEqual`:
- * `Date`s compare by timestamp (so two equal dates from different emissions match),
- * everything else by strict `===`. Deliberately NOT `Object.is` — the official function
- * uses `===`, so `NaN`/`-0` are treated exactly as the SDK treats them.
- */
-function valuesEqual(a: unknown, b: unknown): boolean {
-  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-  return a === b;
-}
-
-/**
- * Order-independent structural equality of two predicates — a faithful port of the
- * official `predicatesMatch`. `set` values compare as true sets (mutual containment via
- * {@link valuesEqual}, so duplicates collapse); `range` bounds compare via `valuesEqual`
- * (Date-aware). This keeps the echo-guard byte-consistent with what the host considers
- * "the same selection".
- */
-function predicatesEqual(a: DataPointPredicate, b: DataPointPredicate): boolean {
-  if (a.type !== b.type || a.name !== b.name) return false;
-  if (a.type === "set" && b.type === "set") {
-    const aInB = a.values.every((v) => b.values.some((u) => valuesEqual(v, u)));
-    const bInA = b.values.every((v) => a.values.some((u) => valuesEqual(v, u)));
-    return aInB && bInA;
-  }
-  if (a.type === "range" && b.type === "range") {
-    return valuesEqual(a.min, b.min) && valuesEqual(a.max, b.max);
-  }
-  return false;
-}
-
-/**
- * Structural, order-independent equality of two selections — reimplements the official
- * `@microsoft/fabric-visuals-core` `selectionsMatch` so this package needs no runtime
- * dependency on the SDK. Two selections match when they have the same predicates,
- * regardless of predicate order.
+ * Structural, order-independent equality of two selections using the SDK contract.
  */
 export function selectionsMatch(a: DataPointSelection, b: DataPointSelection): boolean {
-  if (a.predicates.length !== b.predicates.length) return false;
-  const remaining = b.predicates.slice();
-  for (const pa of a.predicates) {
-    const idx = remaining.findIndex((pb) => predicatesEqual(pa, pb));
-    if (idx < 0) return false;
-    remaining.splice(idx, 1);
-  }
-  return true;
+  return semanticSelectionEqual(a, b);
 }
 
 function cmp(a: unknown, b: unknown): number | null {
-  if (typeof a === "number" && typeof b === "number") return a - b;
-  if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
-  const na = Number(a);
-  const nb = Number(b);
+  const numericValue = (value: unknown) => value instanceof Date ? value.getTime()
+    : typeof value === "string" && parseCalendarDate(value) ? Date.parse(value) : Number(value);
+  const na = numericValue(a);
+  const nb = numericValue(b);
   if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
   return null;
 }
 
 /** Does one row satisfy a single predicate? */
 function predicateMatches(row: Record<string, CellValue>, p: DataPointPredicate): boolean {
-  const cell = row[p.name];
+  const cell = row[p.fieldId];
   if (p.type === "set") {
-    return p.values.some((v) => String(v) === String(cell ?? ""));
+    const matches = p.values.some((v) =>
+      v.kind === "blank" ? cell == null : cell != null && String(v.value) === String(cell),
+    );
+    return p.excluded ? !matches : matches;
+  }
+  if (p.type === "blank") {
+    return p.operator === "isBlank" ? cell == null : cell != null;
+  }
+  if (p.type === "text") {
+    if (cell == null) return false;
+    const text = String(cell).toLowerCase();
+    const matchesTerm = (term: string) =>
+      p.operator === "contains" ? text.includes(term.toLowerCase()) : text.startsWith(term.toLowerCase());
+    const matches = p.match === "all" ? p.terms.every(matchesTerm) : p.terms.some(matchesTerm);
+    return p.negated ? !matches : matches;
+  }
+  if (p.type === "datePart") {
+    const date = typeof cell === "string" ? parseCalendarDate(cell) : undefined;
+    if (!date) return false;
+    const { year, month } = date;
+    const value = p.part === "year" ? year : p.part === "month" ? month
+      : p.part === "quarter" ? Math.ceil(month / 3) : Math.ceil(month / 6);
+    return p.values.includes(value);
   }
   // range
   if (cell == null) return false;
   if (p.min != null) {
-    const d = cmp(cell, p.min);
-    if (d == null || d < 0) return false;
+    const d = cmp(cell, p.min.value);
+    if (d == null || d < 0 || (d === 0 && p.min.inclusive === false)) return false;
   }
   if (p.max != null) {
-    const d = cmp(cell, p.max);
-    if (d == null || d > 0) return false;
+    const d = cmp(cell, p.max.value);
+    if (d == null || d > 0 || (d === 0 && p.max.inclusive === false)) return false;
   }
   return true;
 }

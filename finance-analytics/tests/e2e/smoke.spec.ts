@@ -19,10 +19,18 @@ test.describe("Finance Analytics demo", () => {
   });
 
   test("navigates to another view via the sidebar", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
     await waitForContent(page);
     const nav = page.getByRole("navigation", { name: "Views" }).first();
     await nav.getByRole("button", { name: /Detail Grid/i }).click();
     await expect(page).toHaveURL(/view=detail/);
+    const grid = page.getByRole("grid");
+    await expect(grid).toBeVisible();
+    const cell = grid.getByRole("gridcell").first();
+    await expect(cell).toBeVisible();
+    await cell.click();
+    expect(errors).toEqual([]);
   });
 
   test("has no serious or critical accessibility violations on Overview", async ({ page }) => {
