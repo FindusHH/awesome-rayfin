@@ -290,6 +290,8 @@ integration, modelling, report design, and maintenance, customisable per team:
 
 - A **Microsoft Fabric** workspace on a capacity that supports User Data Functions.
 - **Node.js 20+** and the repo's package manager.
+- **Rayfin CLI 1.35.1 or later** for static hosting. This project uses Rayfin
+  1.36.x; keep the CLI, auth provider, client, and core packages updated together.
 - An **Entra app registration** (SPA) for brokered auth.
 - _(Optional)_ A **GitHub Copilot** subscription for the AI cleanup tools.
 
@@ -342,13 +344,17 @@ fill in your values; `rayfin env --framework vite` generates `.env.local`
 
 ### Local development
 
+Run from the `pbi-fixwe` directory after installing dependencies with `npm install`.
+The npm scripts use this project's installed CLI, not a global installation.
+
 ```bash
-npm run dev      # rayfin env + Vite dev server at http://localhost:5173
+npm run dev      # rayfin env + Fabric backend deployment + local Vite server
 ```
 
 Open [http://localhost:5173](http://localhost:5173) to view the app. `npm run dev`
 deploys the app services to Fabric (for brokered auth) and starts a local Vite
-server pointed at them.
+server pointed at them. It skips the static frontend upload; use
+`npm run rayfin:up` to deploy the hosted frontend as well.
 
 ---
 
